@@ -17,4 +17,4 @@ STEP 4)
 In order to do individual statistics on the abundances of key bacteria, you will open the taxa_abund file created in your working directory
 from STEP 3's workflow. Open the _abund file inside of this at the taxonomic rank you are most interested in (typically phylum, genus, and species)
 then take the top 10 to do individual stats on. Copy, transpose into columns and add next to your metadata, in order to properly model using a Kruskal Wallis 
-test (one x variable), or even aligned rank transformation (if multiple x variables). Examples of this can be found in X...
+test (one x variable), or even aligned rank transformation (if multiple x variables). Examples of this can be found in StandardModelStats.R.
