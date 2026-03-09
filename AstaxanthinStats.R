@@ -39,6 +39,8 @@ install.packages("microeco")
 library(microeco)
 library(dplyr)
 
+install.packages("forcats")
+library(forcats) #This package makes organization much easier, by allowing easier factor relevelling. 
 
 if (!requireNamespace("BiocManager", quietly = TRUE, force = TRUE)) install.packages("BiocManager")
 BiocManager::install("phyloseq")
@@ -52,22 +54,26 @@ library(phyloseq)
 library(microbiome)
 library(rcompanion)
 
-install.packages("forcats")
-library(forcats)
-
 #Import the data
-sampleinfo <- read.csv('D0MetadataNO128B106B.csv', sep=',', header=TRUE, row.names=1, check.names=F)
-sampleinfo$Diet <- fct_relevel(sampleinfo$Diet, "Day0", "CON", "BAX", "MAO", "MAP", "SAX")
-levels(sampleinfo$Diet)
 
+#Diets, n = 2 per treatment
+dietsampleinfo <- read.csv('DietMetadataSeYe.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+dietasvtable <- read.csv('DietASV.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+dietasvtable <- as.matrix(dietasvtable)
+dietasvtable <- t(dietasvtable)
+dietasvtable <- as.data.frame(dietasvtable)
+diettaxatable <- read.csv('DietTaxa.csv', sep=',', header=TRUE, row.names=1, check.names=F)
 
-asvtable <- read.csv('D0ASVNO128B106B.csv', sep=',', header=TRUE, row.names=1, check.names=F)
-asvtable <- as.matrix(asvtable)
-asvtable <- t(asvtable)
-asvtable <- as.data.frame(asvtable)
-taxatable <- read.csv('D0Taxa.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+#Feces from the intestine, n = 9 per treatment
+gutsampleinfo <- read.csv('MetadataSeYe.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+gutsampleinfo
+gutasvtable <- read.csv('ASV.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+gutasvtable <- as.matrix(gutasvtable)
+gutasvtable <- t(gutasvtable)
+gutasvtable <- as.data.frame(gutasvtable)
+guttaxatable <- read.csv('Taxa.csv', sep=',', header=TRUE, row.names=1, check.names=F)
 
- #env_table_16S <- read.csv('Growth-data.csv', sep=',', header=TRUE, row.names=1, check.names=F)
+#env_table_16S <- read.csv('Growth-data.csv', sep=',', header=TRUE, row.names=1, check.names=F)
 
 #Class command allows us to determin e the type of our inputted data. 
 class(sampleinfo)
@@ -75,12 +81,16 @@ class(asvtable)
 class(taxatable)
 #class(env_table_16S)
 
-#Knowing that all three are data.frames, we can make a microtable. 
-mydata <- microtable$new(sample_table = sampleinfo, otu_table = asvtable, tax_table = taxatable)
+#Knowing that all three are data.frames, we can make a microtable. All downstream analysis can be applied to the diet and gut tables. 
+mydatadiet <- microtable$new(sample_table = dietsampleinfo, otu_table = dietasvtable, tax_table = diettaxatable)
+mydatagut <- microtable$new(sample_table = gutsampleinfo, otu_table = gutasvtable, tax_table = guttaxatable)
+
 
 #Now, we clean out dataset
 #Command: filter_pollution takes out non-bacterial DNA sources (ie, mitochondria, chloroplasts)
-mydata$filter_pollution(taxa = c("mitochondria", "chloroplast", "eukaryota", "bacteria_uncl_uncl_uncl_uncl_uncl_uncl", "bacteria_uncl_uncl_uncl_uncl_uncl"))
+mydatagut$filter_pollution(taxa = c("mitochondria", "chloroplast", "eukaryota", "bacteria_uncl_uncl_uncl_uncl_uncl_uncl", "bacteria_uncl_uncl_uncl_uncl_uncl"))
+mydatadiet$filter_pollution(taxa = c("mitochondria", "chloroplast", "eukaryota", "bacteria_uncl_uncl_uncl_uncl_uncl_uncl", "bacteria_uncl_uncl_uncl_uncl_uncl"))
+
 #Command: tidy_dataset trims the dataset further to unify the taxonomic information
 mydata$tidy_dataset()
 
@@ -99,27 +109,30 @@ mydata$sample_sums() %>% range
 
 print(mydata)
 
+All downstream analysis can be applied to the diet and gut tables. 
+
 # from microtable to phyloseq object
-data("mydata")
-physeq <- meco2phyloseq(mydata)
-physeq
+dietphyseq <- meco2phyloseq(mydatadiet)
+dietphyseq
+gutphyseq <- meco2phyloseq(mydatagut)
+gutphyseq
 
 
-
+samplenames()
 ##################################
 #Step 2: Create a folder for taxa abundance
 
 #Command: cal_abund will calculate the taxa abundance of our data
-mydata$cal_abund()
+mydatagut$cal_abund()
 #The result is stored in object$taxa_abund ...
-class(mydata$taxa_abund)
+class(mydatagut$taxa_abund)
 #Classified as a 'list' datatype
 #From here, we can check relative abundance at taxonomic levels 
 #Phylum 
-mydata$taxa_abund$Phylum
+mydatagut$taxa_abund$Species
 
 #Saves the relative abundance for each phylogenetic level in a folder 'taxa_abund'
-mydata$save_abund(dirpath = "taxa_abund")
+mydatagut$save_abund(dirpath = "taxa_abund")
 
 ##################################
 #Step 3: Calculating alpha diversity 
@@ -128,22 +141,21 @@ mydata$save_abund(dirpath = "taxa_abund")
 #with no statistics. 
 #Use PD = (Faith's phylogenetic diversity), T = true if added phylogenetic tree to dataset
 #Otherwise, like here, F = false is what we use. 
-mydata$cal_alphadiv(PD = FALSE)
+mydatagut$cal_alphadiv(PD = FALSE)
 #The result is stored in object$alpha_diversity ...
-class(mydata$alpha_diversity)
-
+class(mydatagut$alpha_diversity)
 #Stored as a dataframe data type
 
 #Saves the alpha diversity for each treatment in a folder called 'alpha_diversity'
-mydata$save_alphadiv(dirpath = "alpha_diversity")
+mydatagut$save_alphadiv(dirpath = "alpha_diversity")
 
 #Now, we create a trans_alpha object - two return data.frames will be given, 
 #data_alpha: used to follow differential tests and plots
 #data_stat
 
-mydata$sample_table
+mydatagut$sample_table
 
-t1 <- trans_alpha$new(dataset = mydata, group = "Diet")
+t1 <- trans_alpha$new(dataset = mydatagut, group = "Diet")
 t1$data_stat[1:5,] #Shows 5 of the 18 lines
 t1$data_stat #Shows all lines
 
@@ -170,9 +182,7 @@ table(head(tab))
 
 p.shannon <- boxplot_alpha(physeq, 
                            index = "shannon",
-                           x_var = "Diet",
-                           fill.colors = c(CON="#41AB8C", BAX="#DD782C", MAO="#8B86BD", MAP="#E84C9B", SAX="#7EB343"))
-
+                           x_var = "Diet")
 p.shannon <- p.shannon + theme_minimal() +  
   labs(x="\nTreatment Group", y="Shannon diversity\n") +
   theme(axis.text = element_text(size=12),
@@ -183,11 +193,9 @@ p.shannon
 
 p.chao <- boxplot_alpha(physeq, 
                         index = "chao1",
-                        x_var = "Diet",
-                        fill.colors = c(CON="#41AB8C", BAX="#DD782C", MAO="#8B86BD", MAP="#E84C9B", SAX="#7EB343"))
-
+                        x_var = "Diet")
 p.chao <- p.chao + theme_minimal() + 
-  labs(x="\nTreatment Group", y="Chao1 index\n") +
+  labs(x="\nTreatment Group", y="Chao1 richness\n") +
   theme(axis.text = element_text(size=12),
         axis.title = element_text(size=16),
         legend.text = element_text(size=12),
@@ -196,9 +204,7 @@ p.chao
 
 p.obs <- boxplot_alpha(physeq, 
                        index = "observed",
-                       x_var = "Diet",
-                       fill.colors = c(CON="#41AB8C", BAX="#DD782C", MAO="#8B86BD", MAP="#E84C9B", SAX="#7EB343"))
-
+                       x_var = "Diet")
 p.obs <- p.obs + theme_minimal() + 
   labs(x="\nTreatment Group", y="Observed ASVs\n") +
   theme(axis.text = element_text(size=12),
@@ -206,6 +212,8 @@ p.obs <- p.obs + theme_minimal() +
         legend.text = element_text(size=12),
         legend.title = element_text(size=16))
 p.obs
+
+grid.arrange(p.obs, p.shannon, p.chao, ncol=1)   
 
 
 ##################################
@@ -216,43 +224,51 @@ p.obs
 #unifrac = FALSE means to not calculate the unifrac method, because again, 
 #there is no phylogenetic data/fasta in the dataset.
 
-mydata$cal_betadiv(unifrac = FALSE)
+mydatadiet$cal_betadiv(unifrac = FALSE)
+mydatagut$cal_betadiv(unifrac = FALSE)
+
 #As seen, the result is stored in a file called object$beta_diversity
 #We can call upon it using:
-mydata$beta_diversity
-class(mydata$beta_diversity)
+mydatagut$beta_diversity
+class(mydatagut$beta_diversity)
 #Classified as a list data type.
 #We can now save the data to a directory. 
-mydata$save_betadiv(dirpath = "beta_diversity")
+mydatagut$save_betadiv(dirpath = "beta_diversity")
 
 #In order to understand the structure of the data, we create a trans_beta object
 #measuring the parameter can invoke the distance matrix in dataset$beta_diversity
 
-t1 <- trans_beta$new(dataset = mydata, group = "Diet", measure = "bray")
-t1$cal_manova(manova_all = TRUE) #To see pairwise, set manova_all = FALSE
+t1 <- trans_beta$new(dataset = mydatagut, group = "Diet", measure = "bray")
+t1$cal_manova(manova_all = FALSE) #To see pairwise, set manova_all = FALSE
 t1$res_manova
 
-t2 <- trans_beta$new(dataset = mydata, group = "Diet", measure = "jaccard")
-t2$cal_manova(manova_all = TRUE)
+t2 <- trans_beta$new(dataset = mydatagut, group = "Diet", measure = "bray")
+t2$cal_manova(manova_all = FALSE)
 t2$res_manova
 
-my_colors <- c(Day0="#e3342f", CON="#41AB8C", BAX="#DD782C", MAO="#8B86BD", MAP="#E84C9B", SAX="#7EB343")
+
+# Assuming t1 is your trans_beta object
+# Define your own colors
+my_colors <- c(Day0="#e3342f", InCON="#f6993f", InY1="#ffed4a", InY2="#38c172", InY3="#4dc0b5", OrCON="#3490dc", OrY1="#6574cd", OrY2="#9561e2",OrY3="#f66d9b")
+my_colorsdiet <- c(InCON="#f6993f", InY1="#ffed4a", InY2="#38c172", InY3="#4dc0b5", OrCON="#3490dc", OrY1="#6574cd", OrY2="#9561e2",OrY3="#f66d9b")
 
 #PCoA plot for Bray-Curtis.
 t1$cal_ordination(method = "PCoA")
 class(t1$res_ordination)
 # plot the PCoA result with confidence ellipse
-plot.d0 <- t1$plot_ordination(plot_type = c("point", "chull"), plot_color = "Diet", color_values = my_colors)
-plot.d0
+plot.gut <- t1$plot_ordination(plot_type = c("point", "chull"), plot_color = "Diet", color_values = my_colors)
+plot.diet 
+plot.gut
+
+
+grid.arrange(plot.diet, plot.gut, ncol=2)   
+
+
 #PCoA plot for Jaccard
 t2$cal_ordination(method = "PCoA")
 class(t2$res_ordination)
 # plot the PCoA result with confidence ellipse
 t2$plot_ordination(plot_color = "Diet", plot_type = c("point", "chull"))
-
-p.diet
-
-betaplots <- grid.arrange(p.diet, plot.d0, ncol=2)
 
 ##################################
 #Step 5: Determine what taxonomic composition is present in these fish. 
@@ -267,70 +283,27 @@ betaplots <- grid.arrange(p.diet, plot.d0, ncol=2)
 
 #First, we'll report thr 10 phyla with highest abundance in the dataset. 
 
-p1_plot <- trans_abund$new(dataset = mydata, taxrank = "Phylum", ntaxa = 10)
+p1_plot <- trans_abund$new(dataset = mydatagut, taxrank = "Phylum", ntaxa = 10)
 p1_plot$plot_bar(others_color = "grey70", facet = "Diet", xtext_keep = FALSE, legend_text_italic = FALSE)
-
-p2_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Phylum", ntaxa = 10)
-p2_plot$plot_bar(others_color = "grey70", facet = "SxD", xtext_keep = FALSE, legend_text_italic = FALSE)
 
 
 #Using groupmean parameter, we can attain the groupmean barplot.
 #What this does is combine each of the individual samples into one mean barplot. 
 
-p2_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Phylum", ntaxa = 10, groupmean = "Treatment")
+p2_plot <- trans_abund$new(dataset = mydatagut, taxrank = "Phylum", ntaxa = 10, groupmean = "Diet")
 phy2_plot <- p2_plot$plot_bar(others_color = "grey70", legend_text_italic = FALSE)
 phy2_plot + theme_classic() + theme(axis.title.y = element_text(size = 18))
 
-#Family plots
-f1_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Family", ntaxa = 20)
-f1_plot$plot_bar(others_color = "grey70", facet = "NTRMT", xtext_keep = FALSE, legend_text_italic = FALSE)
-
-f2_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Family", ntaxa = 20)
-f2_plot$plot_bar(others_color = "grey70", facet = "STRMT", xtext_keep = FALSE, legend_text_italic = FALSE)
-
-
-#Groupmean
-f2_plot <- trans_abund$new(dataset = mydata, taxrank = "Family", ntaxa = 20, groupmean = "STRMT")
-fam2_plot <- f2_plot$plot_bar(others_color = "grey70", legend_text_italic = FALSE)
-fam2_plot + theme_classic() + theme(axis.title.y = element_text(size = 18))
+#Can also be done for all taxanomic ranks, just change taxrank = "Family", "Class", etc. as needed. Typically phylum + genus are used in publications.
 
 #Genera plots
-g1_plot <- trans_abund$new(dataset = mydata, taxrank = "Genus", ntaxa = 20)
-g1_plot$plot_bar(others_color = "grey70", facet = "Diet", xtext_keep = FALSE, legend_text_italic = FALSE)
-
-g2_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Genus", ntaxa = 20)
-g2_plot$plot_bar(others_color = "grey70", facet = "SxD", xtext_keep = FALSE, legend_text_italic = FALSE)
+g1_plot <- trans_abund$new(dataset = mydatagut, taxrank = "Genus", ntaxa = 20)
+g1_plot$plot_bar(others_color = "grey70", facet = "Diet", xtext_keep = FALSE, legend_text_italic = FALSE, guide_legend(ncol = 1))
 
 #Groupmean
-g2_plot <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Genus", ntaxa = 20, groupmean = "Treatment")
+g2_plot <- trans_abund$new(dataset = mydatagut, taxrank = "Genus", ntaxa = 20, groupmean = "Diet", )
 gen2_plot <- g2_plot$plot_bar(others_color = "grey70", legend_text_italic = FALSE)
-gen2_plot + theme_classic() + theme(axis.title.y = element_text(size = 18))
-
-heatmap <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Species", ntaxa = 10, groupmean = "STRMT")
-heatmap_plot <- heatmap$plot_heatmap(
-  color_values = rev(RColorBrewer::brewer.pal(n = 11, name = "RdYlBu")),
-  facet = NULL,
-  facet_switch = "y",
-  x_axis_name = NULL,
-  order_x = NULL,
-  withmargin = TRUE,
-  plot_numbers = FALSE,
-  plot_text_size = 4,
-  plot_breaks = NULL,
-  margincolor = "white",
-  plot_colorscale = "log10",
-  min_abundance = 0.01,
-  max_abundance = NULL,
-  strip_text = 11,
-  xtext_keep = TRUE,
-  xtext_angle = 0,
-  xtext_size = 10,
-  ytext_size = 11,
-  xtitle_keep = TRUE,
-  grid_clean = TRUE,
-  legend_title = "% Relative\nAbundance",
-  pheatmap = FALSE)
-heatmap_plot
+gen2_plot + theme_classic() + theme(axis.title.y = element_text(size = 18)) + guides(color = guide_legend(ncol = 1))
 
 ##################################
 #Step 6: Determine which specific microbes are enriched in gut microbiome when
@@ -345,25 +318,16 @@ heatmap_plot
 
 #For Phylum: 
 p1 <- trans_diff$new(dataset = dataset_rarefied, method = "metastat", group
-                     = "STRMT", taxa_level = "Phylum")
+                     = "Diet", taxa_level = "Phylum")
 select <- c("*","**","***","****") #we select for significance
 select
 p1$res_diff %<>% subset(Significance %in% select)
 p1$plot_diff_abund(add_sig = T, add_sig_label = "Significance")
 #No significant difference in relative abundance between treatments at Phylum level. 
 
-#For Family:
-f1 <- trans_diff$new(dataset = dataset_rarefied, method = "metastat", group
-                     = "STRMT", taxa_level = "Family")
-select <- c("*","**","***","****") #we select for significance
-select
-f1$res_diff %<>% subset(Significance %in% select)
-f1$plot_diff_abund(add_sig = T, add_sig_label = "Significance")
-
-
 #For Genus:  
 g1 <- trans_diff$new(dataset = dataset_rarefied, method = "metastat", group
-                     = "STRMT", taxa_level = "Genus")
+                     = "Diet", taxa_level = "Genus")
 select <- c("*","**","***","****") #we select for significance
 select
 g1$res_diff %<>% subset(Significance %in% select)
@@ -423,7 +387,7 @@ print(p)
 
 # show 15 taxa at Class level
 t1 <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Genus", ntaxa = 15)
-t1$plot_box(group = "NTRMT", xtext_angle = 30)
+t1$plot_box(group = "Diet", xtext_angle = 30)
 
 t2 <- trans_abund$new(dataset = dataset_rarefied, taxrank = "Genus", ntaxa = 15)
-t2$plot_box(group = "STRMT", xtext_angle = 30)
+t2$plot_box(group = "Diet", xtext_angle = 30)
