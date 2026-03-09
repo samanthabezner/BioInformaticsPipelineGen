@@ -3,10 +3,11 @@ Hi internet (and the future me who will use this in order to understand my own c
 This repository is my slightly messy code base that demonstrates a basic workflow for demultiplexed fastq files off of Illumina NextSeq, sequencing the V3-V5 region of bacteria found in the feces of rainbow trout. 
 
 STEP 1)
-Use DADA2.R to take your demultiplexed fastq files and transform them into an ASV table and taxa table. 
+Use DADA2.R to take your demultiplexed fastq files and transform them into an ASV table (ASV.csv) and taxa table (Taxa.csv; NOTE: for Taxa.csv, DADA2 outputs "NA" for all unknown taxonomy. I manually went through
+and changed Taxa.csv to include at what level the bacteria is unclassified to, denoted by the number of tailing _uncl's.). 
 
 STEP 2)
-Create a metadata file that is relevant to your data, in the format provided in the .CSV files attached.
+Create a metadata file that is relevant to your data, in the format provided in the .CSV (MetadataSeYe.csv) files attached.
 
 STEP 3) 
 Input these 3 file types into your AstaxanthinStats.R workflow, which uses microeco and microbiome packages in order to perform statistics on the alpha diversity and beta diversity, as well as make publication ready plots
