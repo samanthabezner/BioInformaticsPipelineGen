@@ -1,0 +1,1025 @@
+#SeY Trial - 2025 - Samantha Bezner
+#Serum Biochemistry stats.
+
+#Let's start by installing and uploading relevant packages.
+install.packages("readxl")
+install.packages("tidyverse")
+install.packages("Matrix")
+install.packages("lme4")
+install.packages("lmerTest")
+install.packages("multcomp")
+install.packages("multcompView")
+install.packages("emmeans")
+install.packages("car")
+install.packages("ggplot2")
+library(ggplot2) #Allows for some really nice figures!
+library(readxl) #Open .xlsx files
+library(tidyverse) #Formatting tables
+library(Matrix)
+library(lme4) #Creating generalized linear mixed models GLMM
+library(lmerTest)
+library(multcomp) #Letters denoting significance
+library(multcompView)
+library(emmeans) #Estimated marginal means 
+library(car)
+
+#Reading of our data 
+serum <- read_excel("Masterfile.xlsx", sheet="Serum", col_names = TRUE)
+#Setting our required variables as factors. 
+serum$Diet <- as.factor(serum$Diet)
+serum$Se <- as.factor(serum$Se)
+serum$Ye <- as.factor(serum$Ye)
+serum$Room <- as.factor(serum$Room)
+
+###### ALBUMIN ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=ALBUMIN, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=ALBUMIN, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.albumin <- lmer(ALBUMIN ~ Se*Ye + (1|Room), data = serum)
+summary(model.albumin)
+anova(model.albumin) #Diet had no significant effect on serum albumin
+ranova(model.albumin) #Room and the interaction effect between room x diet didn't.
+
+#Check Assumptions
+sresid.factor.model.albumin <- residuals(model.albumin, type="pearson")
+pred.factor.model.albumin <- predict(model.albumin)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.albumin, sresid.factor.model.albumin, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.albumin~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(ALBUMIN ~ Diet, data = serum) #p value = 0.8183
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.albumin)
+qqline(sresid.factor.model.albumin, col="steelblue")
+#  Shapiro-Wilk Test W = 0.9426, p-value = 0.1864
+shapiro.test(sresid.factor.model.albumin)
+
+#Estimated marginal means + significance of parameter.
+albumin.emmean <- emmeans(model.albumin, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+albumin.emmean
+albumin.cld <- cld(object = albumin.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+albumin.cld
+
+
+###### ALT ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=ALT, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=ALT, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.alt <- lmer(ALT ~ Se*Ye + (1|Room), data = serum)
+summary(model.alt)
+anova(model.alt) #Diet had no significant effect 
+ranova(model.alt) #Room and the interaction effect between room x diet didn't.
+
+#Check Assumptions
+sresid.factor.model.alt <- residuals(model.alt, type="pearson")
+pred.factor.model.alt <- predict(model.alt)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.alt, sresid.factor.model.alt, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.alt~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(ALT ~ Diet, data = serum) #p value = 0.8405
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.alt)
+qqline(sresid.factor.model.alt, col="steelblue")
+#  Shapiro-Wilk Test W = 0.92268, p-value = 0.06696
+shapiro.test(sresid.factor.model.alt)
+
+#DOES NOT MEET ASSUMPTIONS! ARTransformation. 
+
+art.alt <- art(ALT ~ Se*Ye + (1|Room), serum)
+anova(art.alt)
+
+co.Se <- art.con(art.alt, "Se:Ye")
+sum <- as.data.frame(co.Se)
+cldList(p.value ~ contrast, data=sum)
+
+#Estimated marginal means + significance of parameter.
+alt.emmean <- emmeans(model.alt, pairwise ~ Se*Ye, type = "response", adjust = "dunn")
+alt.emmean
+alt.cld <- cld(object = alt.emmean, adjust = "Dunn", Letters = letters, alpha = 0.05)
+alt.cld
+
+
+###### AST ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=AST, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=AST, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.ast <- lmer(AST ~ Se*Ye + (1|Room), data = serum)
+summary(model.ast)
+anova(model.ast) #Diet had no significant effect
+ranova(model.ast) #Room and the interaction effect between room x diet didn't.
+
+#Check Assumptions
+sresid.factor.model.ast <- residuals(model.ast, type="pearson")
+pred.factor.model.ast <- predict(model.ast)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.ast, sresid.factor.model.ast, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.ast~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(AST ~ Diet, data = serum) #p value = 0.5547
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.ast)
+qqline(sresid.factor.model.ast, col="steelblue")
+#  Shapiro-Wilk Test W = 0.97366, p-value = 0.7571
+shapiro.test(sresid.factor.model.ast)
+
+#Estimated marginal means + significance of parameter.
+ast.emmean <- emmeans(model.ast, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+ast.emmean
+ast.cld <- cld(object = ast.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+ast.cld
+
+
+###### CALCIUM ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CALCIUM, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CALCIUM, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.ca <- lmer(CALCIUM ~ Se*Ye + (1|Room), data = serum)
+summary(model.ca)
+anova(model.ca) #Diet had no significant effect
+ranova(model.ca) #Room and the interaction effect between room x diet didn't.
+
+#Check Assumptions
+sresid.factor.model.ca <- residuals(model.ca, type="pearson")
+pred.factor.model.ca <- predict(model.ca)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.ca, sresid.factor.model.ca, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.ca~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CALCIUM ~ Diet, data = serum) #p value = 0.5547
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.ca)
+qqline(sresid.factor.model.ca, col="steelblue")
+#  Shapiro-Wilk Test W = 0.91943, p-value = 0.05673
+shapiro.test(sresid.factor.model.ca)
+
+#Estimated marginal means + significance of parameter.
+ca.emmean <- emmeans(model.ca, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+ca.emmean
+ca.cld <- cld(object = ca.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+ca.cld
+
+
+###### CHOLESTEROL ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CHOLESTEROL, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CHOLESTEROL, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.cho <- lmer(CHOLESTEROL ~ Se*Ye + (1|Room), data = serum)
+summary(model.cho)
+anova(model.cho) #Diet had no significant effect
+ranova(model.cho) #Room and the interaction effect between room x diet didn't.
+
+#Check Assumptions
+sresid.factor.model.cho <- residuals(model.cho, type="pearson")
+pred.factor.model.cho <- predict(model.cho)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.cho, sresid.factor.model.cho, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.cho~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CHOLESTEROL ~ Diet, data = serum) #p value = 0.8895
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.cho)
+qqline(sresid.factor.model.cho, col="steelblue")
+#  Shapiro-Wilk Test W = 0.96674, p-value = 0.5876
+shapiro.test(sresid.factor.model.cho)
+
+#Estimated marginal means + significance of parameter.
+cho.emmean <- emmeans(model.cho, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+cho.emmean
+cho.cld <- cld(object = cho.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+cho.cld
+
+
+###### CK ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CK, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CK, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.ck <- lmer(CK ~ Se*Ye + (1|Room), data = serum)
+summary(model.ck)
+anova(model.ck) #Diet had no significant effect
+ranova(model.ck) #Room and the interaction effect between room x diet didn't.
+
+#Assumptions not met, so I did a Kruskal-Wallis Test 
+ck.kw <- kruskal.test(CK ~ Diet, data = serum)
+ck.kw
+
+#Check Assumptions
+sresid.factor.model.ck <- residuals(model.ck, type="pearson")
+pred.factor.model.ck <- predict(model.ck)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.ck, sresid.factor.model.ck, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.ck~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CK ~ Diet, data = serum) #p value = 0.6134
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.ck)
+qqline(sresid.factor.model.ck, col="steelblue")
+#  Shapiro-Wilk Test W = 0.79843, p-value = 0.0002777
+shapiro.test(sresid.factor.model.ck)
+
+art.ck <- art(CK ~ Se*Ye + (1|Room), serum)
+anova(art.ck)
+
+#Estimated marginal means + significance of parameter.
+ck.emmean <- emmeans(model.ck, pairwise ~ Se*Ye, type = "response", adjust = "Dunn")
+ck.emmean
+ck.cld <- cld(object = ck.emmean, adjust = "Dunn", Letters = letters, alpha = 0.05)
+ck.cld
+
+
+###### GLUCOSE ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=GLUCOSE, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=GLUCOSE, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.glucose <- lmer(GLUCOSE ~ Se*Ye + (1|Room), data = serum)
+summary(model.glucose)
+anova(model.glucose) #Diet had no significant effect
+ranova(model.glucose) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.glucose <- residuals(model.glucose, type="pearson")
+pred.factor.model.glucose <- predict(model.glucose)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.glucose, sresid.factor.model.glucose, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.glucose~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(GLUCOSE ~ Diet, data = serum) #p value = 0.7596
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.glucose)
+qqline(sresid.factor.model.glucose, col="steelblue")
+#  Shapiro-Wilk Test W = 0.9616, p-value = 0.4714
+shapiro.test(sresid.factor.model.glucose)
+
+#Estimated marginal means + significance of parameter.
+glucose.emmean <- emmeans(model.glucose, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+glucose.emmean
+glucose.cld <- cld(object = glucose.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+glucose.cld
+
+
+###### IRON / FE ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=IRON, group = Diet, fill = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=IRON, group = Room))+geom_boxplot()
+
+ggplot(serum, aes(x=Diet, y=IRON, fill=Diet)) + 
+  geom_boxplot()+
+  labs(x="\nDiet", y = "Serum Iron (umol/L)\n") +
+  scale_fill_manual(values = colorspls) +
+  theme_bw()
+
+#Build model 
+model.fe <- lmer(IRON ~ Se*Ye + (1|Room), data = serum)
+summary(model.fe)
+anova(model.fe) #Diet had no significant effect
+ranova(model.fe) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.fe <- residuals(model.fe, type="pearson")
+pred.factor.model.fe <- predict(model.fe)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.fe, sresid.factor.model.fe, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.fe~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(IRON ~ Diet, data = serum) #p value = 0.7783
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.fe)
+qqline(sresid.factor.model.fe, col="steelblue")
+#  Shapiro-Wilk Test W = 0.97959, p-value = 0.8883
+shapiro.test(sresid.factor.model.fe)
+
+#Estimated marginal means + significance of parameter.
+fe.emmean <- emmeans(model.fe, pairwise ~ Se:Ye, type = "response", adjust = "tukey")
+fe.emmean
+fe.cld <- cld(object = fe.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+fe.cld
+
+
+###### LACTATE ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=LACTATE, group = Diet, fill = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=LACTATE, group = Room))+geom_boxplot()
+
+ggplot(serum, aes(x=Diet, y=LACTATE, fill=Diet)) + 
+  geom_boxplot()+
+  labs(x="\nDiet", y = "Serum Lactate (mmol/L)\n") +
+  scale_fill_manual(values = colorspls) +
+  theme_bw()
+
+
+#Build model 
+model.lac <- lmer(LACTATE ~ Se*Ye + (1|Room), data = serum)
+summary(model.lac)
+anova(model.lac) #Diet had no significant effect
+ranova(model.lac) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.lac <- residuals(model.lac, type="pearson")
+pred.factor.model.lac <- predict(model.lac)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.lac, sresid.factor.model.lac, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.lac~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(LACTATE ~ Diet, data = serum) #p value = 0.5205
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.lac)
+qqline(sresid.factor.model.lac, col="steelblue")
+#  Shapiro-Wilk Test W = 0.94209, p-value = 0.1816
+shapiro.test(sresid.factor.model.lac)
+
+#Estimated marginal means + significance of parameter.
+lac.emmean <- emmeans(model.lac, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+lac.emmean
+lac.cld <- cld(object = lac.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+lac.cld
+
+
+###### LDH ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=LDH, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=LDH, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.ldh <- lmer(LDH ~ Se*Ye + (1|Room), data = serum)
+summary(model.ldh)
+anova(model.ldh) #Diet had no significant effect
+ranova(model.ldh) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.ldh <- residuals(model.ldh, type="pearson")
+pred.factor.model.ldh <- predict(model.ldh)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.ldh, sresid.factor.model.ldh, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.ldh~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(LDH ~ Diet, data = serum) #p value = 0.7852
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.ldh)
+qqline(sresid.factor.model.ldh, col="steelblue")
+#  Shapiro-Wilk Test W = 0.95621, p-value = 0.3672
+shapiro.test(sresid.factor.model.ldh)
+
+#Estimated marginal means + significance of parameter.
+ldh.emmean <- emmeans(model.ldh, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+ldh.emmean
+ldh.cld <- cld(object = ldh.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+ldh.cld
+
+
+###### LIPASE ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=LIPASE, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=LIPASE, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.lipase <- lmer(LIPASE ~ Se*Ye + (1|Room), data = serum)
+summary(model.lipase)
+anova(model.lipase) #Diet had no significant effect
+ranova(model.lipase) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.lipase <- residuals(model.lipase, type="pearson")
+pred.factor.model.lipase <- predict(model.lipase)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.lipase, sresid.factor.model.lipase, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.lipase~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(LIPASE ~ Diet, data = serum) #p value = 0.779
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.lipase)
+qqline(sresid.factor.model.lipase, col="steelblue")
+#  Shapiro-Wilk Test W = 0.98137, p-value = 0.9196
+shapiro.test(sresid.factor.model.lipase)
+
+#Estimated marginal means + significance of parameter.
+lipase.emmean <- emmeans(model.lipase, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+lipase.emmean
+lipase.cld <- cld(object = lipase.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+lipase.cld
+
+
+###### MAGNESIUM / MG ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=MAGNESIUM, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=MAGNESIUM, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.mg <- lmer(MAGNESIUM ~ Se*Ye + (1|Room), data = serum)
+summary(model.mg)
+anova(model.mg) #Diet had no significant effect
+ranova(model.mg) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.mg <- residuals(model.mg, type="pearson")
+pred.factor.model.mg <- predict(model.mg)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.mg, sresid.factor.model.mg, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.mg~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(MAGNESIUM ~ Diet, data = serum) #p value = 0.7194
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.mg)
+qqline(sresid.factor.model.mg, col="steelblue")
+#  Shapiro-Wilk Test W = 0.99198, p-value = 0.9991
+shapiro.test(sresid.factor.model.mg)
+
+#Estimated marginal means + significance of parameter.
+mg.emmean <- emmeans(model.mg, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+mg.emmean
+mg.cld <- cld(object = mg.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+mg.cld
+
+
+###### PHOSPHATE / P ######
+
+#Box plots of fixed effect (diet) and random effect (room) for Final Forklength
+ggplot(serum,aes(x=Diet, y=PHOSPHATE, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=PHOSPHATE, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.p <- lmer(PHOSPHATE ~ Se*Ye + (1|Room), data = serum)
+summary(model.p)
+anova(model.p) #Diet had no significant effect
+ranova(model.p) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.p <- residuals(model.p, type="pearson")
+pred.factor.model.p <- predict(model.p)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.p, sresid.factor.model.p, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.p~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(PHOSPHATE ~ Diet, data = serum) #p value = 0.7942
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.p)
+qqline(sresid.factor.model.p, col="steelblue")
+#  Shapiro-Wilk Test W = 0.96619, p-value = 0.5744
+shapiro.test(sresid.factor.model.p)
+
+#Estimated marginal means + significance of parameter.
+p.emmean <- emmeans(model.p, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+p.emmean
+p.cld <- cld(object = p.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+p.cld
+
+
+###### ZINC / ZN ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=ZINC, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=ZINC, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.zn <- lmer(ZINC ~ Se*Ye + (1|Room), data = serum)
+summary(model.zn)
+anova(model.zn) #Diet had no significant effect
+ranova(model.zn) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.zn <- residuals(model.zn, type="pearson")
+pred.factor.model.zn <- predict(model.zn)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.zn, sresid.factor.model.zn, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.zn~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(ZINC ~ Diet, data = serum) #p value = 0.5948
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.zn)
+qqline(sresid.factor.model.zn, col="steelblue")
+#  Shapiro-Wilk Test W = 0.97491, p-value = 0.787
+shapiro.test(sresid.factor.model.zn)
+
+#Estimated marginal means + significance of parameter.
+zn.emmean <- emmeans(model.zn, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+zn.emmean
+zn.cld <- cld(object = zn.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+zn.cld
+
+
+###### SODIUM / NA ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=SODIUM, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=SODIUM, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.na <- lmer(SODIUM ~ Se*Ye + (1|Room), data = serum)
+summary(model.na)
+anova(model.na) #Diet had no significant effect
+ranova(model.na) #Room and the interaction effect between room x diet didn't.
+
+#Assumptions not met, so I did a Kruskal-Wallis Test 
+na.kw <- kruskal.test(SODIUM ~ Diet, data = serum)
+na.kw
+
+
+#Check Assumptions
+sresid.factor.model.na <- residuals(model.na, type="pearson")
+pred.factor.model.na <- predict(model.na)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.na, sresid.factor.model.na, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.na~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(SODIUM ~ Diet, data = serum) #p value = 0.5437
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.na)
+qqline(sresid.factor.model.na, col="steelblue")
+#  Shapiro-Wilk Test W = 0.80328, p-value = 0.0003334
+shapiro.test(sresid.factor.model.na)
+
+
+art.na <- art(SODIUM ~ Se*Ye + (1|Room), serum)
+anova(art.na)
+
+#Estimated marginal means + significance of parameter.
+na.emmean <- emmeans(model.na, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+na.emmean
+na.cld <- cld(object = na.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+na.cld
+
+
+###### POTASSIUM / K ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=POTASSIUM, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=POTASSIUM, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.k <- lmer(POTASSIUM ~ Se*Ye + (1|Room), data = serum)
+summary(model.k)
+anova(model.k) #Diet had no significant effect
+ranova(model.k) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.k <- residuals(model.k, type="pearson")
+pred.factor.model.k <- predict(model.k)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.k, sresid.factor.model.k, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.k~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(POTASSIUM ~ Diet, data = serum) #p value = 0.6666
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.k)
+qqline(sresid.factor.model.k, col="steelblue")
+#  Shapiro-Wilk Test W = 0.9172, p-value = 0.05066
+shapiro.test(sresid.factor.model.k)
+
+art.k <- art(POTASSIUM ~ Se*Ye + (1|Room), serum)
+anova(art.k)
+
+#Estimated marginal means + significance of parameter.
+k.emmean <- emmeans(model.k, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+k.emmean
+k.cld <- cld(object = k.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+k.cld
+
+
+###### CHLORIDE / CL ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CHLORIDE, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CHLORIDE, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.cl <- lmer(CHLORIDE ~ Se*Ye + (1|Room), data = serum)
+summary(model.cl)
+anova(model.cl) #Diet had significant effect on serum chloride levels
+ranova(model.cl) #Room and the interaction effect between room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.cl <- residuals(model.cl, type="pearson")
+pred.factor.model.cl <- predict(model.cl)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.cl, sresid.factor.model.cl, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.cl~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CHLORIDE ~ Diet, data = serum) #p value = 0.6428
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.cl)
+qqline(sresid.factor.model.cl, col="steelblue")
+#  Shapiro-Wilk Test W = 0.9847, p-value = 0.9644
+
+shapiro.test(sresid.factor.model.cl)
+
+#Estimated marginal means + significance of parameter. AFTER TUKEY ADJUSTMENT, NS?
+cl.emmean <- emmeans(model.cl, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+cl.emmean
+cl.cld <- cld(object = cl.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+cl.cld
+
+
+###### UREA ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=UREA, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=UREA, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.urea <- lmer(UREA ~ Se*Ye + (1|Room), data = serum)
+summary(model.urea)
+anova(model.urea) #Diet had no significant effect
+ranova(model.urea) #Room had significant effect, room x diet didn't.
+
+
+#Check Assumptions
+sresid.factor.model.urea <- residuals(model.urea, type="pearson")
+pred.factor.model.urea <- predict(model.urea)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.urea, sresid.factor.model.urea, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.urea~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(UREA ~ Diet, data = serum) #p value = 0.7624
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.urea)
+qqline(sresid.factor.model.urea, col="steelblue")
+#  Shapiro-Wilk Test W = 0.95165, p-value = 0.294
+shapiro.test(sresid.factor.model.urea)
+
+#Estimated marginal means + significance of parameter.
+urea.emmean <- emmeans(model.urea, pairwise ~ Diet, type = "response", adjust = "tukey")
+urea.emmean
+urea.cld <- cld(object = urea.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+urea.cld
+
+
+###### CREATININE ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CREATININE, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CREATININE, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.crea <- lmer(CREATININE ~ Se*Ye + (1|Room), data = serum)
+summary(model.crea)
+anova(model.crea) #Diet had no significant effect
+ranova(model.crea) #Random effects had no significant effect.
+
+
+#Check Assumptions
+sresid.factor.model.crea <- residuals(model.crea, type="pearson")
+pred.factor.model.crea <- predict(model.crea)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.crea, sresid.factor.model.crea, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.crea~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CREATININE ~ Diet, data = serum) #p value = 0.771
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.crea)
+qqline(sresid.factor.model.crea, col="steelblue")
+#  Shapiro-Wilk Test W = 0.94516, p-value = 0.2124
+shapiro.test(sresid.factor.model.crea)
+
+#Estimated marginal means + significance of parameter.
+crea.emmean <- emmeans(model.crea, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+crea.emmean
+crea.cld <- cld(object = crea.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+crea.cld
+
+
+###### CORTISOL ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=CORTISOL, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=CORTISOL, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.cort <- lmer(CORTISOL ~ Se*Ye + (1|Room), data = serum)
+summary(model.cort)
+anova(model.cort) #Diet had no significant effect 
+ranova(model.cort) #Random effects had no significant effect.
+
+
+#Calculate mean and standard deviation of the final weight.
+summary <- serum %>% group_by(Diet) %>% 
+  summarise(Mean = mean(CORTISOL, na.rm = T), SD = sd(CORTISOL, na.rm = T)) #N.As removed
+summary
+
+
+#Creation of visual
+plot <- ggplot(summary, aes(x = factor(Diet), y = Mean, color = Diet, fill = Diet)) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 1) +
+  geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD), position = position_dodge(0.9), width = 0.25, color = "black") +
+  labs(x = "Diet", y = "Serum cortisol (nmol/L)")
+plot
+
+#Check Assumptions
+sresid.factor.model.cort <- residuals(model.cort, type="pearson")
+pred.factor.model.cort <- predict(model.cort)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.cort, sresid.factor.model.cort, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.cort~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(CORTISOL ~ Diet, data = serum) #p value = 0.2884
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.cort)
+qqline(sresid.factor.model.cort, col="steelblue")
+#  Shapiro-Wilk Test W = 0.92727, p-value = 0.0847
+shapiro.test(sresid.factor.model.cort)
+
+#Estimated marginal means + significance of parameter. 
+cort.emmean <- emmeans(model.cort, pairwise ~ Se*Ye, type = "response", adjust = "tukey")
+cort.emmean
+cort.cld <- cld(object = cort.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+cort.cld
+
+
+###### SI2-L / LIPEMIA INDEX ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=`SI2-L`, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=`SI2-L`, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.si2l <- lmer(`SI2-L` ~ Diet + (1|Room) + (1|Room:Diet), data = serum)
+summary(model.si2l)
+anova(model.si2l) #Diet had no significant effect
+ranova(model.si2l) #Random effects had no significant effect.
+
+
+#Check Assumptions
+sresid.factor.model.si2l <- residuals(model.si2l, type="pearson")
+pred.factor.model.si2l <- predict(model.si2l)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.si2l, sresid.factor.model.si2l, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.si2l~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(`SI2-L` ~ Diet, data = serum) #p value = 0.8274
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.si2l)
+qqline(sresid.factor.model.si2l, col="steelblue")
+#  Shapiro-Wilk Test W = 0.92548, p-value = 0.07728
+shapiro.test(sresid.factor.model.si2l)
+
+#Estimated marginal means + significance of parameter. 
+si2l.emmean <- emmeans(model.si2l, pairwise ~ Diet, type = "response", adjust = "tukey")
+si2l.emmean
+si2l.cld <- cld(object = si2l.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+si2l.cld
+
+
+###### SI2-H / HEMOLYSIS INDEX ######
+
+#Box plots of fixed effect (diet) and random effect (room)
+ggplot(serum,aes(x=Diet, y=`SI2-H`, group = Diet))+geom_boxplot()
+ggplot(serum,aes(x=Diet, y=`SI2-H`, group = Room))+geom_boxplot()
+
+
+#Build model 
+model.si2h <- lmer(`SI2-H` ~ Diet + (1|Room) + (1|Room:Diet), data = serum)
+summary(model.si2h)
+anova(model.si2h) #Diet had no significant effect.
+ranova(model.si2h) #Random effects had no significant effect.
+
+phos.kw <- kruskal.test(Phos ~ Diet, data = minerals)
+phos.kw #p-value = 0.137, diet did not have a significant effect according to KW. 
+
+#Check Assumptions
+sresid.factor.model.si2h <- residuals(model.si2h, type="pearson")
+pred.factor.model.si2h <- predict(model.si2h)
+
+par(mfrow=c(2,2))
+
+#  To check for randomness and whether the residuals are linked to treatments
+plot(pred.factor.model.si2h, sresid.factor.model.si2h, ylab="Residuals", xlab="Predicted values", main="Predicted vs Residuals")
+abline(0, 0) 
+
+#  Homogeneity of residuals for Diet
+boxplot(sresid.factor.model.si2h~Diet,data=serum, main="Homogeneity of Residual 
+        Variance by Diet", xlab="Diet",
+        ylab="Residuals")
+leveneTest(`SI2-H` ~ Diet, data = serum) #p value = 0.7713
+
+#  Normality Assumptions!!!
+qqnorm(sresid.factor.model.si2h)
+qqline(sresid.factor.model.si2h, col="steelblue")
+#  Shapiro-Wilk Test W = 0.94161, p-value = 0.1771
+shapiro.test(sresid.factor.model.si2h)
+
+#Estimated marginal means + significance of parameter.
+si2h.emmean <- emmeans(model.si2h, pairwise ~ Diet, type = "response", adjust = "tukey")
+si2h.emmean
+si2h.cld <- cld(object = si2h.emmean, adjust = "Tukey", Letters = letters, alpha = 0.05)
+si2h.cld
